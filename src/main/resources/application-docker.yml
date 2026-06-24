@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:alpha_web_default}
+    username: ${DB_USERNAME:alphaadmin}
+    password: ${DB_PASSWORD:}
+    driver-class-name: org.postgresql.Driver
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+
+app:
+  jwt:
+    issuer: ${JWT_ISSUER:e-reader-api}
+    access-token-expiration-minutes: ${JWT_ACCESS_TOKEN_EXPIRATION_MINUTES:15}
+    refresh-token-expiration-days: ${JWT_REFRESH_TOKEN_EXPIRATION_DAYS:7}
+    private-key-path: ${JWT_PRIVATE_KEY_PATH:file:/app/keys/private.pem}
+    public-key-path: ${JWT_PUBLIC_KEY_PATH:file:/app/keys/public.pem}

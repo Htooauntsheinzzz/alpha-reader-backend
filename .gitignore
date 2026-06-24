@@ -1,0 +1,25 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+### Java ###
+*.class
+*.log
+
+### Maven ###
+.mvn/timing.properties
+
+### Environment ###
+.env
+.env.*
+!.env.example
+keys/*.pem
+keys/*.key
+
+### IDE ###
+.idea/
+*.iml
+.vscode/
+
+### OS ###
+.DS_Store
+Thumbs.db

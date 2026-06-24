@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: alpha-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: alpha_web_default
+      POSTGRES_USER: alphaadmin
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      TZ: Asia/Bangkok
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alphaadmin -d alpha_web_default"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: alpha-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: alpha-backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: alpha_web_default
+      DB_USERNAME: alphaadmin
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_ISSUER: e-reader-api
+      JWT_ACCESS_TOKEN_EXPIRATION_MINUTES: 15
+      JWT_REFRESH_TOKEN_EXPIRATION_DAYS: 7
+      JWT_PRIVATE_KEY_PATH: file:/app/keys/private.pem
+      JWT_PUBLIC_KEY_PATH: file:/app/keys/public.pem
+    volumes:
+      - ./keys:/app/keys:ro
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,2 @@
+-- Initial Flyway migration placeholder.
+-- No application tables are created in the base project setup.
