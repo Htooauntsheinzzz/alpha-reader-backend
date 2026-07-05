@@ -24,7 +24,7 @@ keys/*.key
 .DS_Store
 Thumbs.db
 
- .classpath
- .factorypath
- .project
- .settings/
+.classpath
+.factorypath
+.project
+.settings/
