@@ -10,7 +10,7 @@ Generate local RSA keys before running the backend:
 
 ```bash
 mkdir -p keys
-openssl genrsa -out keys/private.pem 2048
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out keys/private.pem
 openssl rsa -in keys/private.pem -pubout -out keys/public.pem
 ```
 
