@@ -2,7 +2,6 @@ package com.web.alpha.auth.service.impl;
 
 import com.web.alpha.appusers.domains.AppRole;
 import com.web.alpha.appusers.domains.AppUser;
-import com.web.alpha.appusers.mappers.AuthMapper;
 import com.web.alpha.appusers.repositories.AppUserRepository;
 import com.web.alpha.appusers.repositories.AppUserRoleRepository;
 import com.web.alpha.auth.dto.AuthLoginParam;
@@ -11,6 +10,12 @@ import com.web.alpha.auth.dto.AuthLogoutParam;
 import com.web.alpha.auth.dto.AuthLogoutResponse;
 import com.web.alpha.auth.dto.AuthRefreshParam;
 import com.web.alpha.auth.dto.AuthRefreshResponse;
+import com.web.alpha.auth.exception.AccountInactiveException;
+import com.web.alpha.auth.exception.AuthenticationRequiredException;
+import com.web.alpha.auth.exception.InvalidCredentialsException;
+import com.web.alpha.auth.exception.InvalidRefreshTokenException;
+import com.web.alpha.auth.exception.RoleNotAssignedException;
+import com.web.alpha.auth.mappers.AuthMapper;
 import com.web.alpha.auth.service.AccessTokenBlocklistService;
 import com.web.alpha.auth.service.AuthService;
 import com.web.alpha.auth.service.JwtTokenService;
@@ -19,12 +24,10 @@ import com.web.alpha.auth.service.RefreshTokenData;
 import com.web.alpha.auth.service.RefreshTokenService;
 import java.time.Duration;
 import java.time.Instant;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -78,11 +81,11 @@ public class AuthServiceImpl implements AuthService {
 		}
 
 		if (!ACTIVE_STATUS.equalsIgnoreCase(user.getStatus())) {
-			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User account is not active");
+			throw new AccountInactiveException();
 		}
 
 		AppRole role = appUserRoleRepository.findWithUserAndRoleByUserId(user.getId())
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "User role is not assigned"))
+				.orElseThrow(RoleNotAssignedException::new)
 				.getRole();
 
 		String accessToken = jwtTokenService.generateAccessToken(user, role);
@@ -103,18 +106,18 @@ public class AuthServiceImpl implements AuthService {
 	@Transactional(readOnly = true)
 	public AuthRefreshResponse refresh(AuthRefreshParam request) {
 		RefreshTokenData refreshTokenData = refreshTokenService.find(request.refreshToken())
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token"));
+				.orElseThrow(InvalidRefreshTokenException::new);
 
 		AppUser user = appUserRepository.findById(refreshTokenData.userId())
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token"));
+				.orElseThrow(InvalidRefreshTokenException::new);
 
 		if (!ACTIVE_STATUS.equalsIgnoreCase(user.getStatus())) {
 			refreshTokenService.delete(request.refreshToken());
-			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User account is not active");
+			throw new AccountInactiveException();
 		}
 
 		AppRole role = appUserRoleRepository.findWithUserAndRoleByUserId(user.getId())
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "User role is not assigned"))
+				.orElseThrow(RoleNotAssignedException::new)
 				.getRole();
 
 		String accessToken = jwtTokenService.generateAccessToken(user, role);
@@ -128,7 +131,7 @@ public class AuthServiceImpl implements AuthService {
 	@Override
 	public AuthLogoutResponse logout(Jwt jwt, AuthLogoutParam request) {
 		if (jwt == null) {
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication is required");
+			throw new AuthenticationRequiredException();
 		}
 
 		Instant expiresAt = jwt.getExpiresAt();
@@ -144,7 +147,7 @@ public class AuthServiceImpl implements AuthService {
 		return new AuthLogoutResponse("Admin-web Logged out successfully");
 	}
 
-	private ResponseStatusException invalidCredentials() {
-		return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+	private InvalidCredentialsException invalidCredentials() {
+		return new InvalidCredentialsException();
 	}
 }

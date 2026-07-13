@@ -1,12 +1,11 @@
 package com.web.alpha.auth.service.impl;
 
+import com.web.alpha.auth.exception.LoginRateLimitExceededException;
 import com.web.alpha.auth.service.LoginRateLimitService;
 import java.time.Duration;
 import java.util.Locale;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class LoginRateLimitServiceImpl implements LoginRateLimitService {
@@ -25,7 +24,7 @@ public class LoginRateLimitServiceImpl implements LoginRateLimitService {
 	public void checkAllowed(String email, String clientIp) {
 		String value = redisTemplate.opsForValue().get(key(email, clientIp));
 		if (value != null && Integer.parseInt(value) >= MAX_FAILED_ATTEMPTS) {
-			throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Too many failed login attempts. Try again later.");
+			throw new LoginRateLimitExceededException();
 		}
 	}
 

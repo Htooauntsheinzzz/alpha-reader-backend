@@ -1,4 +1,4 @@
-package com.web.alpha.appusers.mappers;
+package com.web.alpha.auth.mappers;
 
 import com.web.alpha.appusers.domains.AppRole;
 import com.web.alpha.appusers.domains.AppUser;
