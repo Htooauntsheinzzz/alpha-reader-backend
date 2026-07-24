@@ -12,4 +12,6 @@ public interface AppGenreRepository extends JpaRepository<AppGenre, Long> {
 	List<AppGenre> findAllByIsDeletedOrderByIdAsc(Integer isDeleted);
 
 	boolean existsByNameAndIsDeleted(String name, Integer isDeleted);
+
+	boolean existsByNameIgnoreCaseAndIsDeleted(String name, Integer isDeleted);
 }

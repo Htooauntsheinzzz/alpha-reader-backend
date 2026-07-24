@@ -24,10 +24,30 @@ spring:
     baseline-on-migrate: true
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
       repositories:
         enabled: false
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:alphaadmin}
+    password: ${RABBITMQ_PASSWORD:alpha$67P@ssw0rd}
+    connection-timeout: 5s
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+    listener:
+      simple:
+        acknowledge-mode: auto
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          initial-interval: 1s
+          multiplier: 2
+          max-interval: 10s
+          max-attempts: 3
   cache:
     type: redis
 
@@ -47,3 +67,13 @@ app:
     refresh-token-expiration-days: 7
     private-key-path: file:./keys/private.pem
     public-key-path: file:./keys/public.pem
+  messaging:
+    exchange: alpha.events
+    audit-queue: alpha.audit
+    dead-letter-exchange: alpha.events.dlx
+    dead-letter-queue: alpha.audit.dlq
+    dead-letter-routing-key: audit.failed
+    publisher-batch-size: 50
+    publisher-max-retries: 10
+    publisher-confirm-timeout-millis: 5000
+    publisher-fixed-delay-millis: 5000
