@@ -1,5 +1,6 @@
 package com.web.alpha.security;
 
+import com.web.alpha.auth.service.AccessTokenBlocklistService;
 import com.web.alpha.config.JwtProperties;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -21,8 +22,12 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
@@ -63,10 +68,21 @@ public class JwtConfig {
 	}
 
 	@Bean
-	public JwtDecoder jwtDecoder(RSAPublicKey rsaPublicKey) {
-		return NimbusJwtDecoder.withPublicKey(rsaPublicKey)
+	public JwtDecoder jwtDecoder(
+			RSAPublicKey rsaPublicKey,
+			JwtProperties jwtProperties,
+			AccessTokenBlocklistService accessTokenBlocklistService
+	) {
+		NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withPublicKey(rsaPublicKey)
 				.signatureAlgorithm(SignatureAlgorithm.RS256)
 				.build();
+
+		OAuth2TokenValidator<Jwt> validator = new DelegatingOAuth2TokenValidator<>(
+				JwtValidators.createDefaultWithIssuer(jwtProperties.issuer()),
+				new BlocklistedJwtValidator(accessTokenBlocklistService)
+		);
+		jwtDecoder.setJwtValidator(validator);
+		return jwtDecoder;
 	}
 
 	private byte[] readPemContent(String location) throws IOException {

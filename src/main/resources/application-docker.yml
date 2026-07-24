@@ -8,6 +8,13 @@ spring:
     redis:
       host: ${REDIS_HOST:redis}
       port: ${REDIS_PORT:6379}
+      repositories:
+        enabled: false
+  rabbitmq:
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:alphaadmin}
+    password: ${RABBITMQ_PASSWORD:alpha$67P@ssw0rd}
 
 app:
   jwt:

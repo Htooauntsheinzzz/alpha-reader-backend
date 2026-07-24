@@ -2,7 +2,7 @@
 
 ## Project overview
 
-Spring Boot backend project setup for the e-reader and webtoon admin system. This initial setup includes PostgreSQL, Redis cache management, Flyway, JPA, Validation, and Spring Security dependencies without authentication APIs or endpoint implementations.
+Spring Boot backend for the e-reader and webtoon admin system. It includes PostgreSQL, Redis caching, RabbitMQ messaging, Flyway, JPA, validation, and RS256 JWT authentication.
 
 ## RS256 JWT keys
 
@@ -26,7 +26,7 @@ Create a local environment file and set a private database password:
 cp .env.example .env
 ```
 
-Edit `DB_PASSWORD` in `.env`, then run:
+Edit `DB_PASSWORD` and `RABBITMQ_PASSWORD` in `.env`, then run:
 
 ```bash
 docker compose up -d --build
@@ -45,6 +45,7 @@ docker compose down -v
 docker compose logs -f backend
 docker compose logs -f postgres
 docker compose logs -f redis
+docker compose logs -f rabbitmq
 ```
 
 ## How to connect local Mac pgAdmin to PostgreSQL
@@ -64,6 +65,18 @@ Password: the `DB_PASSWORD` value from your local `.env`
 Host: localhost
 
 Port: 6379
+
+## How to connect to RabbitMQ locally
+
+AMQP host: localhost
+
+AMQP port: 5672
+
+Management UI: http://localhost:15672
+
+Username and password: the `RABBITMQ_USERNAME` and `RABBITMQ_PASSWORD` values from `.env`
+
+The application publishes transactional outbox events to the durable `alpha.events` topic exchange. The `alpha.audit` queue receives all routing keys, and messages rejected by consumers are routed to `alpha.audit.dlq`.
 
 ## Maven commands
 

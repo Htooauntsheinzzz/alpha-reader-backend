@@ -27,7 +27,8 @@ public class RedisConfig {
 		"book-cache",
 		"chapter-cache",
 		"category-cache",
-		"banner-cache"
+		"banner-cache",
+		"genre-cache"
 	);
 
 	@Bean
@@ -45,6 +46,7 @@ public class RedisConfig {
 			.cacheDefaults(cacheConfiguration)
 			.withInitialCacheConfigurations(cacheConfigurations)
 			.initialCacheNames(CACHE_NAMES)
+			.transactionAware()
 			.build();
 	}
 }
