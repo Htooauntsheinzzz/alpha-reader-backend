@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/admin/genres")
+@RequestMapping("/api/v1/admin/content/story-genres")
 public class AppGenreController {
 
 	private final AppGenreService appGenreService;
@@ -30,7 +30,7 @@ public class AppGenreController {
 	@PostMapping
 	public ResponseEntity<AppGenreResponse> create(@Valid @RequestBody AppGenreCreateRequest request) {
 		AppGenreResponse response = appGenreService.create(request);
-		return ResponseEntity.created(URI.create("/api/v1/admin/genres/" + response.id())).body(response);
+		return ResponseEntity.created(URI.create("/api/v1/admin/content/story-genres/" + response.id())).body(response);
 	}
 
 	@PutMapping("/{id}")

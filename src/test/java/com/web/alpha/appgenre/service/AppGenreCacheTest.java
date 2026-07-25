@@ -57,9 +57,8 @@ class AppGenreCacheTest {
 	@BeforeEach
 	void setUp() {
 		reset(appGenreRepository);
-		Cache cache = cacheManager.getCache("genre-cache");
-		assertNotNull(cache);
-		cache.clear();
+		cache("genre-cache").clear();
+		cache("genre-list-cache").clear();
 		genre = genre(1L, "Fantasy");
 		Jwt jwt = Jwt.withTokenValue("test-token")
 				.header("alg", "RS256")
@@ -110,10 +109,8 @@ class AppGenreCacheTest {
 				new AppGenreUpdateRequest("Epic Fantasy", LocalDate.of(2026, 7, 23), "Updated", 1)
 		);
 
-		Cache cache = cacheManager.getCache("genre-cache");
-		assertNotNull(cache);
-		assertEquals(response, cache.get(1L, AppGenreResponse.class));
-		assertNull(cache.get("all"));
+		assertEquals(response, cache("genre-cache").get("genre:1", AppGenreResponse.class));
+		assertNull(cache("genre-list-cache").get("genre:all"));
 	}
 
 	@Test
@@ -126,10 +123,14 @@ class AppGenreCacheTest {
 
 		appGenreService.delete(1L);
 
-		Cache cache = cacheManager.getCache("genre-cache");
+		assertNull(cache("genre-cache").get("genre:1"));
+		assertNull(cache("genre-list-cache").get("genre:all"));
+	}
+
+	private Cache cache(String name) {
+		Cache cache = cacheManager.getCache(name);
 		assertNotNull(cache);
-		assertNull(cache.get(1L));
-		assertNull(cache.get("all"));
+		return cache;
 	}
 
 	private AppGenre genre(Long id, String name) {
@@ -151,7 +152,7 @@ class AppGenreCacheTest {
 
 		@Bean
 		CacheManager cacheManager() {
-			return new ConcurrentMapCacheManager("genre-cache");
+			return new ConcurrentMapCacheManager("genre-cache", "genre-list-cache");
 		}
 
 		@Bean
