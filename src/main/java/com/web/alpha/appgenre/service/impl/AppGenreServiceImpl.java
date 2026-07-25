@@ -49,8 +49,8 @@ public class AppGenreServiceImpl implements AppGenreService {
 	@Override
 	@Transactional
 	@Caching(
-			put = @CachePut(cacheNames = "genre-cache", key = "#result.id()"),
-			evict = @CacheEvict(cacheNames = "genre-cache", key = "'all'")
+			put = @CachePut(cacheNames = "genre-cache", key = "'genre:' + #result.id()"),
+			evict = @CacheEvict(cacheNames = "genre-list-cache", key = "'genre:all'")
 	)
 	public AppGenreResponse create(AppGenreCreateRequest request) {
 		Long currentUserId = getCurrentUserId();
@@ -66,8 +66,8 @@ public class AppGenreServiceImpl implements AppGenreService {
 	@Override
 	@Transactional
 	@Caching(
-			put = @CachePut(cacheNames = "genre-cache", key = "#result.id()"),
-			evict = @CacheEvict(cacheNames = "genre-cache", key = "'all'")
+			put = @CachePut(cacheNames = "genre-cache", key = "'genre:' + #result.id()"),
+			evict = @CacheEvict(cacheNames = "genre-list-cache", key = "'genre:all'")
 	)
 	public AppGenreResponse update(Long id, AppGenreUpdateRequest request) {
 		Long currentUserId = getCurrentUserId();
@@ -86,8 +86,8 @@ public class AppGenreServiceImpl implements AppGenreService {
 	@Override
 	@Transactional
 	@Caching(evict = {
-			@CacheEvict(cacheNames = "genre-cache", key = "#id"),
-			@CacheEvict(cacheNames = "genre-cache", key = "'all'")
+			@CacheEvict(cacheNames = "genre-cache", key = "'genre:' + #id"),
+			@CacheEvict(cacheNames = "genre-list-cache", key = "'genre:all'")
 	})
 	public void delete(Long id) {
 		Long currentUserId = getCurrentUserId();
@@ -101,14 +101,14 @@ public class AppGenreServiceImpl implements AppGenreService {
 
 	@Override
 	@Transactional(readOnly = true)
-	@Cacheable(cacheNames = "genre-cache", key = "#id")
+	@Cacheable(cacheNames = "genre-cache", key = "'genre:' + #id")
 	public AppGenreResponse getById(Long id) {
 		return appGenreMapper.toResponse(findActiveGenre(id));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
-	@Cacheable(cacheNames = "genre-cache", key = "'all'")
+	@Cacheable(cacheNames = "genre-list-cache", key = "'genre:all'")
 	public List<AppGenreResponse> getAll() {
 		return appGenreRepository.findAllByIsDeletedOrderByIdAsc(NOT_DELETED).stream()
 				.map(appGenreMapper::toResponse)

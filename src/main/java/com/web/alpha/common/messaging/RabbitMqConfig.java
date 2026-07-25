@@ -41,11 +41,27 @@ public class RabbitMqConfig {
 	}
 
 	@Bean
+	public Queue storyTypeQueue(RabbitMqProperties properties) {
+		return QueueBuilder.durable(properties.storyTypeQueue())
+				.deadLetterExchange(properties.deadLetterExchange())
+				.deadLetterRoutingKey(properties.deadLetterRoutingKey())
+				.build();
+	}
+
+	@Bean
 	public Binding auditQueueBinding(
 			@Qualifier("auditQueue") Queue auditQueue,
 			TopicExchange domainEventExchange
 	) {
 		return BindingBuilder.bind(auditQueue).to(domainEventExchange).with("#");
+	}
+
+	@Bean
+	public Binding storyTypeQueueBinding(
+			@Qualifier("storyTypeQueue") Queue storyTypeQueue,
+			TopicExchange domainEventExchange
+	) {
+		return BindingBuilder.bind(storyTypeQueue).to(domainEventExchange).with("story-type.*");
 	}
 
 	@Bean
