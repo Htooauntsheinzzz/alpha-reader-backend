@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.web.alpha.common.generator.GlobalCodeGenerator;
+import com.web.alpha.common.security.CurrentUserProvider;
 import com.web.alpha.membership.dto.MembershipCreateRequest;
 import com.web.alpha.membership.dto.MembershipPlanResponse;
 import com.web.alpha.membership.entity.MembershipPlan;
@@ -41,7 +42,8 @@ class MembershipPlanServiceImplTest {
                 repository,
                 new MembershipPlanMapper(),
                 new GlobalCodeGenerator(),
-                eventPublisher
+                eventPublisher,
+                new CurrentUserProvider()
         );
         Jwt jwt = Jwt.withTokenValue("test-token")
                 .header("alg", "RS256")

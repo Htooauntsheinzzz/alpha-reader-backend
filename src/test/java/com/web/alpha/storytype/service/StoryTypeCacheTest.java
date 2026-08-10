@@ -7,6 +7,7 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.web.alpha.common.security.CurrentUserProvider;
 import com.web.alpha.storytype.dto.StoryTypeUpdateRequest;
 import com.web.alpha.storytype.entity.StoryType;
 import com.web.alpha.storytype.event.StoryTypeEventPublisher;
@@ -140,7 +141,12 @@ class StoryTypeCacheTest {
 				StoryTypeRepository repository,
 				StoryTypeEventPublisher eventPublisher
 		) {
-			return new StoryTypeServiceImpl(repository, new StoryTypeMapper(), eventPublisher);
+			return new StoryTypeServiceImpl(
+					repository,
+					new StoryTypeMapper(),
+					eventPublisher,
+					new CurrentUserProvider()
+			);
 		}
 	}
 }
