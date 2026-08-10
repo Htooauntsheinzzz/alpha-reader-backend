@@ -1,9 +1,11 @@
 package com.web.alpha.membership.service.impl;
 
 import com.web.alpha.common.generator.GlobalCodeGenerator;
+import com.web.alpha.common.security.CurrentUserProvider;
 import com.web.alpha.membership.dto.MembershipCreateRequest;
 import com.web.alpha.membership.dto.MembershipPlanResponse;
 import com.web.alpha.membership.entity.MembershipPlan;
+import com.web.alpha.membership.exception.MembershipPlanNameAlreadyExistsException;
 import com.web.alpha.membership.event.MembershipPlanEvent;
 import com.web.alpha.membership.event.MembershipPlanEventPublisher;
 import com.web.alpha.membership.mapper.MembershipPlanMapper;
@@ -16,13 +18,8 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class MembershipPlanServiceImpl implements MembershipPlanService {
@@ -34,17 +31,20 @@ public class MembershipPlanServiceImpl implements MembershipPlanService {
     private final MembershipPlanMapper membershipPlanMapper;
     private final GlobalCodeGenerator globalCodeGenerator;
     private final MembershipPlanEventPublisher eventPublisher;
+    private final CurrentUserProvider currentUserProvider;
 
     public MembershipPlanServiceImpl(
             MembershipPlanRepository membershipPlanRepository,
             MembershipPlanMapper membershipPlanMapper,
             GlobalCodeGenerator globalCodeGenerator,
-            MembershipPlanEventPublisher eventPublisher
+            MembershipPlanEventPublisher eventPublisher,
+            CurrentUserProvider currentUserProvider
     ) {
         this.membershipPlanRepository = membershipPlanRepository;
         this.membershipPlanMapper = membershipPlanMapper;
         this.globalCodeGenerator = globalCodeGenerator;
         this.eventPublisher = eventPublisher;
+        this.currentUserProvider = currentUserProvider;
     }
 
     @Override
@@ -60,7 +60,7 @@ public class MembershipPlanServiceImpl implements MembershipPlanService {
             )
     )
     public MembershipPlanResponse create(MembershipCreateRequest request) {
-        Long currentUserId = getCurrentUserId();
+        Long currentUserId = currentUserProvider.getUserId();
         log.info("Creating membership plan actorUserId={} name={}", currentUserId, request.name());
         ensureNameIsAvailable(request.name());
 
@@ -77,11 +77,7 @@ public class MembershipPlanServiceImpl implements MembershipPlanService {
         try {
             savedEntity = membershipPlanRepository.saveAndFlush(entity);
         } catch (DataIntegrityViolationException exception) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Membership plan name already exists",
-                    exception
-            );
+            throw new MembershipPlanNameAlreadyExistsException(exception);
         }
 
         savedEntity.setPlanId(globalCodeGenerator.generate("PLN", savedEntity.getId()));
@@ -106,19 +102,8 @@ public class MembershipPlanServiceImpl implements MembershipPlanService {
 
     private void ensureNameIsAvailable(String name) {
         if (membershipPlanRepository.existsByNameIgnoreCaseAndIsDeleted(name, NOT_DELETED)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Membership plan name already exists");
+            throw new MembershipPlanNameAlreadyExistsException();
         }
     }
 
-    private Long getCurrentUserId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !(authentication.getPrincipal() instanceof Jwt jwt)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication is required");
-        }
-        try {
-            return Long.valueOf(jwt.getSubject());
-        } catch (NumberFormatException | NullPointerException exception) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "JWT subject must be a user id");
-        }
-    }
 }

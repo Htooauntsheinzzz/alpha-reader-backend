@@ -12,10 +12,12 @@ import com.web.alpha.appgenre.dto.AppGenreCreateRequest;
 import com.web.alpha.appgenre.dto.AppGenreResponse;
 import com.web.alpha.appgenre.dto.AppGenreUpdateRequest;
 import com.web.alpha.appgenre.entity.AppGenre;
+import com.web.alpha.appgenre.exception.AppGenreNameAlreadyExistsException;
 import com.web.alpha.appgenre.mapper.AppGenreMapper;
 import com.web.alpha.appgenre.repository.AppGenreRepository;
 import com.web.alpha.appgenre.service.impl.AppGenreServiceImpl;
 import com.web.alpha.common.outbox.service.OutboxService;
+import com.web.alpha.common.security.CurrentUserProvider;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -31,13 +33,11 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = AppGenreCacheTest.CacheTestConfig.class)
@@ -87,14 +87,14 @@ class AppGenreCacheTest {
 	void rejectsActiveNameWithDifferentLetterCase() {
 		when(appGenreRepository.existsByNameIgnoreCaseAndIsDeleted("fantasy", 0)).thenReturn(true);
 
-		ResponseStatusException exception = assertThrows(
-				ResponseStatusException.class,
+		AppGenreNameAlreadyExistsException exception = assertThrows(
+				AppGenreNameAlreadyExistsException.class,
 				() -> appGenreService.create(
 						new AppGenreCreateRequest("fantasy", LocalDate.of(2026, 7, 24), null)
 				)
 		);
 
-		assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+		assertEquals("APP_GENRE_NAME_ALREADY_EXISTS", exception.getCode());
 	}
 
 	@Test
@@ -176,7 +176,12 @@ class AppGenreCacheTest {
 				AppGenreMapper mapper,
 				OutboxService outboxService
 		) {
-			return new AppGenreServiceImpl(repository, mapper, outboxService);
+			return new AppGenreServiceImpl(
+					repository,
+					mapper,
+					outboxService,
+					new CurrentUserProvider()
+			);
 		}
 	}
 }

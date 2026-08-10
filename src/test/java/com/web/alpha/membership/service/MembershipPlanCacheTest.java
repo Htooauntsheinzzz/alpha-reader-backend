@@ -9,6 +9,7 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
 import com.web.alpha.common.generator.GlobalCodeGenerator;
+import com.web.alpha.common.security.CurrentUserProvider;
 import com.web.alpha.membership.dto.MembershipCreateRequest;
 import com.web.alpha.membership.dto.MembershipPlanResponse;
 import com.web.alpha.membership.entity.MembershipPlan;
@@ -123,7 +124,8 @@ class MembershipPlanCacheTest {
                     repository,
                     new MembershipPlanMapper(),
                     new GlobalCodeGenerator(),
-                    eventPublisher
+                    eventPublisher,
+                    new CurrentUserProvider()
             );
         }
     }
