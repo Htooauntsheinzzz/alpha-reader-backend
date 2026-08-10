@@ -71,6 +71,7 @@ app:
     exchange: alpha.events
     audit-queue: alpha.audit
     story-type-queue: story-type-events
+    membership-plan-queue: membership-plan-events
     dead-letter-exchange: alpha.events.dlx
     dead-letter-queue: alpha.audit.dlq
     dead-letter-routing-key: audit.failed

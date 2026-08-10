@@ -4,8 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import com.web.alpha.appgenre.dto.AppGenreResponse;
+import com.web.alpha.membership.dto.MembershipPlanResponse;
 import com.web.alpha.storytype.dto.StoryTypeResponse;
 import java.nio.ByteBuffer;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -13,6 +15,23 @@ import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
 
 class RedisConfigTest {
+
+	@Test
+	void membershipPlanCachesUseDeclaredResponseTypes() {
+		MembershipPlanResponse response = membershipPlanResponse();
+		GenericJacksonJsonRedisSerializer previousSerializer = GenericJacksonJsonRedisSerializer.builder().build();
+
+		MembershipPlanResponse cachedResponse = RedisConfig.membershipPlanSerializationPair().read(
+				ByteBuffer.wrap(previousSerializer.serialize(response))
+		);
+		List<MembershipPlanResponse> cachedList = RedisConfig.membershipPlanListSerializationPair().read(
+				ByteBuffer.wrap(previousSerializer.serialize(List.of(response)))
+		);
+
+		assertInstanceOf(MembershipPlanResponse.class, cachedResponse);
+		assertEquals(1, cachedList.size());
+		assertInstanceOf(MembershipPlanResponse.class, cachedList.getFirst());
+	}
 
 	@Test
 	void genreCachesDeserializeExistingJsonToDeclaredResponseTypes() {
@@ -71,6 +90,23 @@ class RedisConfigTest {
 				0,
 				1L,
 				LocalDateTime.of(2026, 7, 22, 10, 30)
+		);
+	}
+
+	private MembershipPlanResponse membershipPlanResponse() {
+		return new MembershipPlanResponse(
+				1L,
+				"PLN-001",
+				"Monthly Plan",
+				new BigDecimal("9.99"),
+				30L,
+				"Monthly membership",
+				1,
+				0,
+				1L,
+				LocalDateTime.of(2026, 7, 30, 10, 30),
+				1L,
+				LocalDateTime.of(2026, 7, 30, 10, 30)
 		);
 	}
 }

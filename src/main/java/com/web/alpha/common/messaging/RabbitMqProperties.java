@@ -7,6 +7,7 @@ public record RabbitMqProperties(
 		String exchange,
 		String auditQueue,
 		String storyTypeQueue,
+		String membershipPlanQueue,
 		String deadLetterExchange,
 		String deadLetterQueue,
 		String deadLetterRoutingKey,
