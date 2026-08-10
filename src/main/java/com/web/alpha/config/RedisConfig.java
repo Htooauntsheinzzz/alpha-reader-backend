@@ -1,6 +1,7 @@
 package com.web.alpha.config;
 
 import com.web.alpha.appgenre.dto.AppGenreResponse;
+import com.web.alpha.membership.dto.MembershipPlanResponse;
 import com.web.alpha.storytype.dto.StoryTypeResponse;
 import java.time.Duration;
 import java.util.List;
@@ -35,6 +36,8 @@ public class RedisConfig {
 		"banner-cache",
 		"genre-cache",
 		"genre-list-cache",
+		"membership-plan-cache",
+		"membership-plan-list-cache",
 		"story-type-cache",
 		"story-type-list-cache"
 	);
@@ -56,6 +59,14 @@ public class RedisConfig {
 		cacheConfigurations.put(
 			"genre-list-cache",
 			cacheConfiguration.serializeValuesWith(genreListSerializationPair())
+		);
+		cacheConfigurations.put(
+			"membership-plan-cache",
+			cacheConfiguration.serializeValuesWith(membershipPlanSerializationPair())
+		);
+		cacheConfigurations.put(
+			"membership-plan-list-cache",
+			cacheConfiguration.serializeValuesWith(membershipPlanListSerializationPair())
 		);
 		cacheConfigurations.put(
 			"story-type-cache",
@@ -85,6 +96,21 @@ public class RedisConfig {
 				new JacksonJsonRedisSerializer<>(
 						TypeFactory.createDefaultInstance()
 								.constructCollectionType(List.class, AppGenreResponse.class)
+				)
+		);
+	}
+
+	static RedisSerializationContext.SerializationPair<MembershipPlanResponse> membershipPlanSerializationPair() {
+		return RedisSerializationContext.SerializationPair.fromSerializer(
+				new JacksonJsonRedisSerializer<>(MembershipPlanResponse.class)
+		);
+	}
+
+	static RedisSerializationContext.SerializationPair<List<MembershipPlanResponse>> membershipPlanListSerializationPair() {
+		return RedisSerializationContext.SerializationPair.fromSerializer(
+				new JacksonJsonRedisSerializer<>(
+						TypeFactory.createDefaultInstance()
+								.constructCollectionType(List.class, MembershipPlanResponse.class)
 				)
 		);
 	}
