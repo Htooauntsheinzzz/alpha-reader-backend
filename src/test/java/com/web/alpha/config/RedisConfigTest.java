@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import com.web.alpha.appgenre.dto.AppGenreResponse;
 import com.web.alpha.membership.dto.MembershipPlanResponse;
+import com.web.alpha.membership.enums.MembershipDurationUnit;
 import com.web.alpha.storytype.dto.StoryTypeResponse;
 import java.nio.ByteBuffer;
 import java.math.BigDecimal;
@@ -99,8 +100,11 @@ class RedisConfigTest {
 				"PLN-001",
 				"Monthly Plan",
 				new BigDecimal("9.99"),
-				30L,
+				1L,
 				"Monthly membership",
+				MembershipDurationUnit.MONTH,
+				10,
+				0,
 				1,
 				0,
 				1L,

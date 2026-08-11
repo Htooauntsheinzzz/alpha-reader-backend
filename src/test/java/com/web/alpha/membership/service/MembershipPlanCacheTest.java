@@ -9,9 +9,11 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
 import com.web.alpha.common.generator.GlobalCodeGenerator;
+import com.web.alpha.common.security.CurrentUserProvider;
 import com.web.alpha.membership.dto.MembershipCreateRequest;
 import com.web.alpha.membership.dto.MembershipPlanResponse;
 import com.web.alpha.membership.entity.MembershipPlan;
+import com.web.alpha.membership.enums.MembershipDurationUnit;
 import com.web.alpha.membership.event.MembershipPlanEventPublisher;
 import com.web.alpha.membership.mapper.MembershipPlanMapper;
 import com.web.alpha.membership.repository.MembershipPlanRepository;
@@ -78,8 +80,11 @@ class MembershipPlanCacheTest {
         MembershipPlanResponse response = service.create(new MembershipCreateRequest(
                 "Monthly Plan",
                 new BigDecimal("9.99"),
-                30L,
-                "Monthly membership"
+                1L,
+                "Monthly membership",
+                MembershipDurationUnit.MONTH,
+                10,
+                0
         ));
 
         assertEquals(
@@ -123,7 +128,8 @@ class MembershipPlanCacheTest {
                     repository,
                     new MembershipPlanMapper(),
                     new GlobalCodeGenerator(),
-                    eventPublisher
+                    eventPublisher,
+                    new CurrentUserProvider()
             );
         }
     }

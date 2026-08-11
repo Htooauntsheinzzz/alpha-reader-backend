@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.web.alpha.common.security.CurrentUserProvider;
 import com.web.alpha.storytype.dto.StoryTypeCreateRequest;
 import com.web.alpha.storytype.dto.StoryTypeResponse;
 import com.web.alpha.storytype.dto.StoryTypeUpdateRequest;
@@ -38,7 +39,12 @@ class StoryTypeServiceImplTest {
 	void setUp() {
 		repository = mock(StoryTypeRepository.class);
 		eventPublisher = mock(StoryTypeEventPublisher.class);
-		service = new StoryTypeServiceImpl(repository, new StoryTypeMapper(), eventPublisher);
+		service = new StoryTypeServiceImpl(
+				repository,
+				new StoryTypeMapper(),
+				eventPublisher,
+				new CurrentUserProvider()
+		);
 		Jwt jwt = Jwt.withTokenValue("test-token")
 				.header("alg", "RS256")
 				.subject("7")

@@ -9,9 +9,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.web.alpha.common.generator.GlobalCodeGenerator;
+import com.web.alpha.common.security.CurrentUserProvider;
 import com.web.alpha.membership.dto.MembershipCreateRequest;
 import com.web.alpha.membership.dto.MembershipPlanResponse;
 import com.web.alpha.membership.entity.MembershipPlan;
+import com.web.alpha.membership.enums.MembershipDurationUnit;
 import com.web.alpha.membership.event.MembershipPlanEvent;
 import com.web.alpha.membership.event.MembershipPlanEventPublisher;
 import com.web.alpha.membership.mapper.MembershipPlanMapper;
@@ -41,7 +43,8 @@ class MembershipPlanServiceImplTest {
                 repository,
                 new MembershipPlanMapper(),
                 new GlobalCodeGenerator(),
-                eventPublisher
+                eventPublisher,
+                new CurrentUserProvider()
         );
         Jwt jwt = Jwt.withTokenValue("test-token")
                 .header("alg", "RS256")
@@ -74,8 +77,11 @@ class MembershipPlanServiceImplTest {
         MembershipPlanResponse response = service.create(new MembershipCreateRequest(
                 "Monthly Plan",
                 new BigDecimal("9.99"),
-                30L,
-                "Monthly membership"
+                1L,
+                "Monthly membership",
+                MembershipDurationUnit.MONTH,
+                10,
+                0
         ));
 
         assertNull(firstFlushedPlanId.get());
@@ -85,6 +91,9 @@ class MembershipPlanServiceImplTest {
         assertEquals(7L, response.updateBy());
         assertEquals(1, response.isActive());
         assertEquals(0, response.isDeleted());
+        assertEquals(MembershipDurationUnit.MONTH, response.durationUnit());
+        assertEquals(10, response.accessLevel());
+        assertEquals(0, response.isLifetime());
         assertNotNull(response.createdAt());
         assertEquals(response.createdAt(), response.updateAt());
 
@@ -93,5 +102,6 @@ class MembershipPlanServiceImplTest {
         verify(eventPublisher).publishCreated(eventCaptor.capture());
         assertEquals("PLN-012", eventCaptor.getValue().planId());
         assertEquals(7L, eventCaptor.getValue().performedBy());
+        assertEquals(MembershipDurationUnit.MONTH, eventCaptor.getValue().durationUnit());
     }
 }

@@ -4,10 +4,13 @@ import com.web.alpha.appgenre.dto.AppGenreCreateRequest;
 import com.web.alpha.appgenre.dto.AppGenreResponse;
 import com.web.alpha.appgenre.dto.AppGenreUpdateRequest;
 import com.web.alpha.appgenre.entity.AppGenre;
+import com.web.alpha.appgenre.exception.AppGenreNameAlreadyExistsException;
+import com.web.alpha.appgenre.exception.AppGenreNotFoundException;
 import com.web.alpha.appgenre.mapper.AppGenreMapper;
 import com.web.alpha.appgenre.repository.AppGenreRepository;
 import com.web.alpha.appgenre.service.AppGenreService;
 import com.web.alpha.common.outbox.service.OutboxService;
+import com.web.alpha.common.security.CurrentUserProvider;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -17,13 +20,8 @@ import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class AppGenreServiceImpl implements AppGenreService {
@@ -35,15 +33,18 @@ public class AppGenreServiceImpl implements AppGenreService {
 	private final AppGenreRepository appGenreRepository;
 	private final AppGenreMapper appGenreMapper;
 	private final OutboxService outboxService;
+	private final CurrentUserProvider currentUserProvider;
 
 	public AppGenreServiceImpl(
 			AppGenreRepository appGenreRepository,
 			AppGenreMapper appGenreMapper,
-			OutboxService outboxService
+			OutboxService outboxService,
+			CurrentUserProvider currentUserProvider
 	) {
 		this.appGenreRepository = appGenreRepository;
 		this.appGenreMapper = appGenreMapper;
 		this.outboxService = outboxService;
+		this.currentUserProvider = currentUserProvider;
 	}
 
 	@Override
@@ -53,7 +54,7 @@ public class AppGenreServiceImpl implements AppGenreService {
 			evict = @CacheEvict(cacheNames = "genre-list-cache", key = "'genre:all'")
 	)
 	public AppGenreResponse create(AppGenreCreateRequest request) {
-		Long currentUserId = getCurrentUserId();
+		Long currentUserId = currentUserProvider.getUserId();
 		log.info("Creating app genre actorUserId={} name={}", currentUserId, request.name());
 		ensureNameIsAvailable(request.name());
 		AppGenre entity = appGenreMapper.toEntity(request, currentUserId);
@@ -70,7 +71,7 @@ public class AppGenreServiceImpl implements AppGenreService {
 			evict = @CacheEvict(cacheNames = "genre-list-cache", key = "'genre:all'")
 	)
 	public AppGenreResponse update(Long id, AppGenreUpdateRequest request) {
-		Long currentUserId = getCurrentUserId();
+		Long currentUserId = currentUserProvider.getUserId();
 		log.info("Updating app genre genreId={} actorUserId={}", id, currentUserId);
 		AppGenre entity = findActiveGenre(id);
 		if (!entity.getName().equalsIgnoreCase(request.name())) {
@@ -90,7 +91,7 @@ public class AppGenreServiceImpl implements AppGenreService {
 			@CacheEvict(cacheNames = "genre-list-cache", key = "'genre:all'")
 	})
 	public void delete(Long id) {
-		Long currentUserId = getCurrentUserId();
+		Long currentUserId = currentUserProvider.getUserId();
 		log.info("Soft deleting app genre genreId={} actorUserId={}", id, currentUserId);
 		AppGenre entity = findActiveGenre(id);
 		entity.setIsDeleted(1);
@@ -117,12 +118,12 @@ public class AppGenreServiceImpl implements AppGenreService {
 
 	private AppGenre findActiveGenre(Long id) {
 		return appGenreRepository.findByIdAndIsDeleted(id, NOT_DELETED)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "App genre not found"));
+				.orElseThrow(AppGenreNotFoundException::new);
 	}
 
 	private void ensureNameIsAvailable(String name) {
 		if (appGenreRepository.existsByNameIgnoreCaseAndIsDeleted(name, NOT_DELETED)) {
-			throw new ResponseStatusException(HttpStatus.CONFLICT, "App genre name already exists");
+			throw new AppGenreNameAlreadyExistsException();
 		}
 	}
 
@@ -130,7 +131,7 @@ public class AppGenreServiceImpl implements AppGenreService {
 		try {
 			return appGenreRepository.saveAndFlush(genre);
 		} catch (DataIntegrityViolationException exception) {
-			throw new ResponseStatusException(HttpStatus.CONFLICT, "App genre name already exists", exception);
+			throw new AppGenreNameAlreadyExistsException(exception);
 		}
 	}
 
@@ -154,16 +155,4 @@ public class AppGenreServiceImpl implements AppGenreService {
 		);
 	}
 
-	private Long getCurrentUserId() {
-		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		if (authentication == null || !(authentication.getPrincipal() instanceof Jwt jwt)) {
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication is required");
-		}
-
-		try {
-			return Long.valueOf(jwt.getSubject());
-		} catch (NumberFormatException | NullPointerException exception) {
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "JWT subject must be a user id");
-		}
-	}
 }
