@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.web.alpha.membership.enums.MembershipDurationUnit;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -121,6 +122,24 @@ abstract  class MembershipPlanJsonDeserializerSupport<T> extends JsonDeserialize
 
         return value.longValue();
     }
+
+    protected MembershipDurationUnit readDurationUnit(
+            ObjectNode json,
+            String fieldName,
+            DeserializationContext context,
+            Class<?> requestType
+    ) throws IOException {
+        Integer code = readInteger(json, fieldName, context, requestType);
+        if (code == null) {
+            return null;
+        }
+        try {
+            return MembershipDurationUnit.fromCode(code);
+        } catch (IllegalArgumentException exception) {
+            return context.reportInputMismatch(requestType, exception.getMessage());
+        }
+    }
+
     protected BigDecimal readDecimal(
             ObjectNode json,
             String fieldName,

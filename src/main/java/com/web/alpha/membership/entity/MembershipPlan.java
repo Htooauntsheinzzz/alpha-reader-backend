@@ -1,5 +1,6 @@
 package com.web.alpha.membership.entity;
 
+import com.web.alpha.membership.enums.MembershipDurationUnit;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -29,11 +30,23 @@ public class MembershipPlan {
     @Column(name = "price" , nullable = false)
     private BigDecimal price;
 
-    @Column(name ="duration" , nullable = false)
+    @Column(name = "duration")
     private Long duration;
 
     @Column(name = "description", length = 500 )
     private String description;
+
+    @Convert(converter = MembershipDurationUnitConverter.class)
+    @Column(name = "duration_unit")
+    private MembershipDurationUnit durationUnit;
+
+    @Column(name = "access_level", nullable = false)
+    @JdbcTypeCode(SqlTypes.SMALLINT)
+    private Integer accessLevel;
+
+    @Column(name = "is_lifetime", nullable = false)
+    @JdbcTypeCode(SqlTypes.SMALLINT)
+    private Integer isLifetime;
 
     @Column(name = "is_active" , nullable = false)
     @JdbcTypeCode(SqlTypes.SMALLINT) // 1 or 0

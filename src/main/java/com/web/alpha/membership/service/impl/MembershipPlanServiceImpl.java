@@ -88,6 +88,9 @@ public class MembershipPlanServiceImpl implements MembershipPlanService {
                 finalEntity.getName(),
                 finalEntity.getPrice(),
                 finalEntity.getDuration(),
+                finalEntity.getDurationUnit(),
+                finalEntity.getAccessLevel(),
+                finalEntity.getIsLifetime(),
                 currentUserId,
                 LocalDateTime.now()
         ));
