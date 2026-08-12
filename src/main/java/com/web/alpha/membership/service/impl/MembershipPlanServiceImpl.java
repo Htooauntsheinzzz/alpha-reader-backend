@@ -12,10 +12,13 @@ import com.web.alpha.membership.mapper.MembershipPlanMapper;
 import com.web.alpha.membership.repository.MembershipPlanRepository;
 import com.web.alpha.membership.service.MembershipPlanService;
 import java.time.LocalDateTime;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -101,6 +104,15 @@ public class MembershipPlanServiceImpl implements MembershipPlanService {
                 currentUserId
         );
         return membershipPlanMapper.toResponse(finalEntity);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "membership-plan-list-cache" , key = "'membership-plan:all'")
+    public List<MembershipPlanResponse> getAll() {
+        return   membershipPlanRepository.findAllByIsDeletedOrderByIdDesc(NOT_DELETED).stream()
+                .map(membershipPlanMapper::toResponse)
+                .toList();
     }
 
     private void ensureNameIsAvailable(String name) {
