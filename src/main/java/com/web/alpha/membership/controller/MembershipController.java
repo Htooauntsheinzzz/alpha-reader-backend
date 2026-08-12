@@ -5,11 +5,10 @@ import com.web.alpha.membership.dto.MembershipPlanResponse;
 import com.web.alpha.membership.service.MembershipPlanService;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/admin/membership-plans")
@@ -30,6 +29,13 @@ public class MembershipController {
                 URI.create("/api/v1/admin/membership-plans/" + response.id())
         ).body(response);
     }
+
+
+    @GetMapping
+    public ResponseEntity<List<MembershipPlanResponse>> getAll(){
+        return  ResponseEntity.ok(membershipPlanService.getAll());
+    }
+
 
 
 
