@@ -1,13 +1,12 @@
 package com.web.alpha.config;
 
-import com.web.alpha.appgenre.dto.AppGenreResponse;
-import com.web.alpha.membership.dto.MembershipPlanResponse;
-import com.web.alpha.storytype.dto.StoryTypeResponse;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -17,10 +16,9 @@ import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
-import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
-import tools.jackson.databind.type.TypeFactory;
+import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 
 @Configuration
 @EnableCaching
@@ -44,89 +42,41 @@ public class RedisConfig {
 
 	@Bean
 	public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory) {
+		BasicPolymorphicTypeValidator typeValidator = BasicPolymorphicTypeValidator.builder()
+			.allowIfSubType("com.web.alpha.")
+			.allowIfSubType("java.math.")
+			.allowIfSubType("java.time.")
+			.allowIfSubType("java.util.")
+			.build();
+		GenericJacksonJsonRedisSerializer valueSerializer = GenericJacksonJsonRedisSerializer.builder()
+			.enableDefaultTyping(typeValidator)
+			.writer((mapper, value) -> mapper.writerFor(Object.class)
+				.writeValueAsBytes(normalizeCollection(value)))
+			.build();
+
 		RedisCacheConfiguration cacheConfiguration = RedisCacheConfiguration.defaultCacheConfig()
 			.entryTtl(DEFAULT_TTL)
 			.disableCachingNullValues()
 			.serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
-			.serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(GenericJacksonJsonRedisSerializer.builder().build()));
-
-		Map<String, RedisCacheConfiguration> cacheConfigurations = CACHE_NAMES.stream()
-			.collect(Collectors.toMap(cacheName -> cacheName, cacheName -> cacheConfiguration));
-		cacheConfigurations.put(
-			"genre-cache",
-			cacheConfiguration.serializeValuesWith(genreSerializationPair())
-		);
-		cacheConfigurations.put(
-			"genre-list-cache",
-			cacheConfiguration.serializeValuesWith(genreListSerializationPair())
-		);
-		cacheConfigurations.put(
-			"membership-plan-cache",
-			cacheConfiguration.serializeValuesWith(membershipPlanSerializationPair())
-		);
-		cacheConfigurations.put(
-			"membership-plan-list-cache",
-			cacheConfiguration.serializeValuesWith(membershipPlanListSerializationPair())
-		);
-		cacheConfigurations.put(
-			"story-type-cache",
-			cacheConfiguration.serializeValuesWith(storyTypeSerializationPair())
-		);
-		cacheConfigurations.put(
-			"story-type-list-cache",
-			cacheConfiguration.serializeValuesWith(storyTypeListSerializationPair())
-		);
+			.serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(valueSerializer));
 
 		return RedisCacheManager.builder(redisConnectionFactory)
 			.cacheDefaults(cacheConfiguration)
-			.withInitialCacheConfigurations(cacheConfigurations)
 			.initialCacheNames(CACHE_NAMES)
 			.transactionAware()
 			.build();
 	}
 
-	static RedisSerializationContext.SerializationPair<AppGenreResponse> genreSerializationPair() {
-		return RedisSerializationContext.SerializationPair.fromSerializer(
-				new JacksonJsonRedisSerializer<>(AppGenreResponse.class)
-		);
-	}
-
-	static RedisSerializationContext.SerializationPair<List<AppGenreResponse>> genreListSerializationPair() {
-		return RedisSerializationContext.SerializationPair.fromSerializer(
-				new JacksonJsonRedisSerializer<>(
-						TypeFactory.createDefaultInstance()
-								.constructCollectionType(List.class, AppGenreResponse.class)
-				)
-		);
-	}
-
-	static RedisSerializationContext.SerializationPair<MembershipPlanResponse> membershipPlanSerializationPair() {
-		return RedisSerializationContext.SerializationPair.fromSerializer(
-				new JacksonJsonRedisSerializer<>(MembershipPlanResponse.class)
-		);
-	}
-
-	static RedisSerializationContext.SerializationPair<List<MembershipPlanResponse>> membershipPlanListSerializationPair() {
-		return RedisSerializationContext.SerializationPair.fromSerializer(
-				new JacksonJsonRedisSerializer<>(
-						TypeFactory.createDefaultInstance()
-								.constructCollectionType(List.class, MembershipPlanResponse.class)
-				)
-		);
-	}
-
-	static RedisSerializationContext.SerializationPair<StoryTypeResponse> storyTypeSerializationPair() {
-		return RedisSerializationContext.SerializationPair.fromSerializer(
-				new JacksonJsonRedisSerializer<>(StoryTypeResponse.class)
-		);
-	}
-
-	static RedisSerializationContext.SerializationPair<List<StoryTypeResponse>> storyTypeListSerializationPair() {
-		return RedisSerializationContext.SerializationPair.fromSerializer(
-				new JacksonJsonRedisSerializer<>(
-						TypeFactory.createDefaultInstance()
-								.constructCollectionType(List.class, StoryTypeResponse.class)
-				)
-		);
+	private static Object normalizeCollection(Object value) {
+		if (value instanceof List<?> list) {
+			return new ArrayList<>(list);
+		}
+		if (value instanceof Set<?> set) {
+			return new HashSet<>(set);
+		}
+		if (value instanceof Map<?, ?> map) {
+			return new LinkedHashMap<>(map);
+		}
+		return value;
 	}
 }
