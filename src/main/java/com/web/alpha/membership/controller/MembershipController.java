@@ -30,7 +30,10 @@ public class MembershipController {
         ).body(response);
     }
 
-
+    @GetMapping("/{id}")
+    public ResponseEntity<MembershipPlanResponse> getById(@PathVariable long id){
+        return ResponseEntity.ok(membershipPlanService.getById(id));
+    }
     @GetMapping
     public ResponseEntity<List<MembershipPlanResponse>> getAll(){
         return  ResponseEntity.ok(membershipPlanService.getAll());

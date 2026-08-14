@@ -11,5 +11,6 @@ public interface MembershipPlanService {
 
     List<MembershipPlanResponse> getAll();
 
+    MembershipPlanResponse getById(Long id);
 
 }

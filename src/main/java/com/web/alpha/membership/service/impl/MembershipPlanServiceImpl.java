@@ -8,6 +8,7 @@ import com.web.alpha.membership.entity.MembershipPlan;
 import com.web.alpha.membership.exception.MembershipPlanNameAlreadyExistsException;
 import com.web.alpha.membership.event.MembershipPlanEvent;
 import com.web.alpha.membership.event.MembershipPlanEventPublisher;
+import com.web.alpha.membership.exception.MembershipPlanNotFoundException;
 import com.web.alpha.membership.mapper.MembershipPlanMapper;
 import com.web.alpha.membership.repository.MembershipPlanRepository;
 import com.web.alpha.membership.service.MembershipPlanService;
@@ -108,11 +109,23 @@ public class MembershipPlanServiceImpl implements MembershipPlanService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "membership-plan-cache", key = "'membership-plan:' + #id")
+    public  MembershipPlanResponse getById(Long id) {
+        return  membershipPlanMapper.toResponse(findActiveMembershipPlan(id));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     @Cacheable(cacheNames = "membership-plan-list-cache" , key = "'membership-plan:all'")
     public List<MembershipPlanResponse> getAll() {
         return   membershipPlanRepository.findAllByIsDeletedOrderByIdDesc(NOT_DELETED).stream()
                 .map(membershipPlanMapper::toResponse)
                 .toList();
+    }
+
+    private MembershipPlan findActiveMembershipPlan(Long id){
+        return membershipPlanRepository.findByIdAndIsDeleted(id, NOT_DELETED)
+                .orElseThrow(MembershipPlanNotFoundException::new);
     }
 
     private void ensureNameIsAvailable(String name) {
