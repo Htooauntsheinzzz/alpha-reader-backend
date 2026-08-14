@@ -21,4 +21,6 @@ public final class MembershipPlanNameAlreadyExistsException extends ApiException
                 cause
         );
     }
+
+
 }

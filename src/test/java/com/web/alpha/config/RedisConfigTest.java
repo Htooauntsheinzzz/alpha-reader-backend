@@ -2,115 +2,78 @@ package com.web.alpha.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import com.web.alpha.appgenre.dto.AppGenreResponse;
-import com.web.alpha.membership.dto.MembershipPlanResponse;
-import com.web.alpha.membership.enums.MembershipDurationUnit;
-import com.web.alpha.storytype.dto.StoryTypeResponse;
-import java.nio.ByteBuffer;
+import java.lang.reflect.Proxy;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
-import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
+import org.springframework.cache.transaction.TransactionAwareCacheDecorator;
+import org.springframework.data.redis.cache.RedisCache;
+import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 
 class RedisConfigTest {
 
 	@Test
-	void membershipPlanCachesUseDeclaredResponseTypes() {
-		MembershipPlanResponse response = membershipPlanResponse();
-		GenericJacksonJsonRedisSerializer previousSerializer = GenericJacksonJsonRedisSerializer.builder().build();
+	void everyConfiguredAndFutureCachePreservesValueTypes() {
+		RedisCacheManager cacheManager = (RedisCacheManager) new RedisConfig()
+				.cacheManager(redisConnectionFactoryStub());
+		cacheManager.afterPropertiesSet();
 
-		MembershipPlanResponse cachedResponse = RedisConfig.membershipPlanSerializationPair().read(
-				ByteBuffer.wrap(previousSerializer.serialize(response))
-		);
-		List<MembershipPlanResponse> cachedList = RedisConfig.membershipPlanListSerializationPair().read(
-				ByteBuffer.wrap(previousSerializer.serialize(List.of(response)))
-		);
-
-		assertInstanceOf(MembershipPlanResponse.class, cachedResponse);
-		assertEquals(1, cachedList.size());
-		assertInstanceOf(MembershipPlanResponse.class, cachedList.getFirst());
+		cacheManager.getCacheNames().forEach(cacheName -> assertCacheRoundTrip(cacheManager, cacheName));
+		assertCacheRoundTrip(cacheManager, "future-module-cache");
 	}
 
-	@Test
-	void genreCachesDeserializeExistingJsonToDeclaredResponseTypes() {
-		AppGenreResponse response = genreResponse();
-		GenericJacksonJsonRedisSerializer previousSerializer = GenericJacksonJsonRedisSerializer.builder().build();
-
-		AppGenreResponse cachedResponse = RedisConfig.genreSerializationPair().read(
-				ByteBuffer.wrap(previousSerializer.serialize(response))
-		);
-		List<AppGenreResponse> cachedList = RedisConfig.genreListSerializationPair().read(
-				ByteBuffer.wrap(previousSerializer.serialize(List.of(response)))
-		);
-
-		assertInstanceOf(AppGenreResponse.class, cachedResponse);
-		assertEquals(1, cachedList.size());
-		assertInstanceOf(AppGenreResponse.class, cachedList.getFirst());
-	}
-
-	@Test
-	void storyTypeCachesDeserializeExistingJsonToDeclaredResponseTypes() {
-		StoryTypeResponse response = response();
-		GenericJacksonJsonRedisSerializer previousSerializer = GenericJacksonJsonRedisSerializer.builder().build();
-
-		StoryTypeResponse cachedResponse = RedisConfig.storyTypeSerializationPair().read(
-				ByteBuffer.wrap(previousSerializer.serialize(response))
-		);
-		List<StoryTypeResponse> cachedList = RedisConfig.storyTypeListSerializationPair().read(
-				ByteBuffer.wrap(previousSerializer.serialize(List.of(response)))
-		);
-
-		assertInstanceOf(StoryTypeResponse.class, cachedResponse);
-		assertEquals(1, cachedList.size());
-		assertInstanceOf(StoryTypeResponse.class, cachedList.getFirst());
-	}
-
-	private StoryTypeResponse response() {
-		return new StoryTypeResponse(
+	private void assertCacheRoundTrip(RedisCacheManager cacheManager, String cacheName) {
+		CacheTestValue value = new CacheTestValue(
 				1L,
-				"Novel",
-				LocalDate.of(2026, 7, 22),
-				"Novel story type",
-				1,
-				0,
-				1L,
-				LocalDateTime.of(2026, 7, 22, 10, 30)
-		);
-	}
-
-	private AppGenreResponse genreResponse() {
-		return new AppGenreResponse(
-				1L,
-				"Fantasy",
-				LocalDate.of(2026, 7, 22),
-				"Fantasy genre",
-				1,
-				0,
-				1L,
-				LocalDateTime.of(2026, 7, 22, 10, 30)
-		);
-	}
-
-	private MembershipPlanResponse membershipPlanResponse() {
-		return new MembershipPlanResponse(
-				1L,
-				"PLN-001",
-				"Monthly Plan",
+				"Test value",
 				new BigDecimal("9.99"),
-				1L,
-				"Monthly membership",
-				MembershipDurationUnit.MONTH,
-				10,
-				0,
-				1,
-				0,
-				1L,
-				LocalDateTime.of(2026, 7, 30, 10, 30),
-				1L,
-				LocalDateTime.of(2026, 7, 30, 10, 30)
+				LocalDateTime.of(2026, 8, 14, 12, 0)
+		);
+
+		Object cachedValue = deserializeWithConfiguredCache(cacheManager, cacheName, value);
+		assertInstanceOf(CacheTestValue.class, cachedValue);
+
+		Object cachedListValue = deserializeWithConfiguredCache(cacheManager, cacheName, List.of(value));
+		List<?> cachedList = assertInstanceOf(List.class, cachedListValue);
+		assertEquals(1, cachedList.size());
+		assertInstanceOf(CacheTestValue.class, cachedList.getFirst());
+
+		Object cachedSetValue = deserializeWithConfiguredCache(cacheManager, cacheName, Set.of(value));
+		Set<?> cachedSet = assertInstanceOf(Set.class, cachedSetValue);
+		assertInstanceOf(CacheTestValue.class, cachedSet.iterator().next());
+
+		Object cachedMapValue = deserializeWithConfiguredCache(cacheManager, cacheName, Map.of("value", value));
+		Map<?, ?> cachedMap = assertInstanceOf(Map.class, cachedMapValue);
+		assertInstanceOf(CacheTestValue.class, cachedMap.get("value"));
+	}
+
+	private Object deserializeWithConfiguredCache(
+			RedisCacheManager cacheManager,
+			String cacheName,
+			Object value
+	) {
+		TransactionAwareCacheDecorator cache = (TransactionAwareCacheDecorator)
+				cacheManager.getCache(cacheName);
+		assertNotNull(cache);
+		RedisCache redisCache = (RedisCache) cache.getTargetCache();
+
+		var serializationPair = redisCache.getCacheConfiguration().getValueSerializationPair();
+		return serializationPair.read(serializationPair.write(value));
+	}
+
+	private RedisConnectionFactory redisConnectionFactoryStub() {
+		return (RedisConnectionFactory) Proxy.newProxyInstance(
+				RedisConnectionFactory.class.getClassLoader(),
+				new Class<?>[] { RedisConnectionFactory.class },
+				(proxy, method, arguments) -> null
 		);
 	}
+
+	private record CacheTestValue(Long id, String name, BigDecimal amount, LocalDateTime createdAt) {}
 }
